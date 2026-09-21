@@ -1,0 +1,16 @@
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+node_modules/
+dist/
+*.apk
+*.ap_
+*.dex
+android/.gradle/
+android/build/
+android/local.properties
+android/app/build/
+android/app/src/main/assets/www/*
+!android/app/src/main/assets/www/.gitkeep

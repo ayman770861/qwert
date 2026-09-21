@@ -1,0 +1,77 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Assemble APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Pack web game into Android assets
+        run: |
+          WWW="android/app/src/main/assets/www"
+          mkdir -p "$WWW"
+          cp index.html manifest.json sw.js "$WWW/"
+          cp -r css js img "$WWW/"
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi android/app/src/main/res/mipmap-hdpi
+          cp img/icon-192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp img/icon-192.png android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          echo "sdk.dir=${ANDROID_SDK_ROOT:-$ANDROID_HOME}" > android/local.properties
+          echo "Packed $(find "$WWW" -type f | wc -l) web files"
+
+      - name: Build debug and release APKs
+        working-directory: android
+        run: gradle assembleDebug assembleRelease --no-daemon --stacktrace
+
+      - name: Collect APKs
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist/app-debug.apk
+          cp android/app/build/outputs/apk/release/app-release.apk dist/app-release.apk
+          ls -lh dist
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: shayef-apk
+          path: |
+            dist/app-debug.apk
+            dist/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/app-release.apk
+            dist/app-debug.apk
+          generate_release_notes: true
+          fail_on_unmatched_files: true
