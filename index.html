@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="المزارع شايف" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="screen-orientation" content="landscape" />
-  <meta name="description" content="مزرعة 2.5D بالعرض: امشِ، ازرع، ابنِ" />
+  <meta name="description" content="مزرعة ومدينة 2.5D: ازرع، صنّع، بِع، وسلّم الطلبات" />
   <title>المزارع شايف</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="img/icon-192.png" />
@@ -26,9 +26,9 @@
         <div class="menu-dust" aria-hidden="true"></div>
         <img src="img/shayef.png" alt="المزارع شايف" class="menu-hero" />
         <div class="menu-panel">
-          <p class="kicker">مزرعة 2.5D · بالعرض</p>
+          <p class="kicker">مزرعة ومدينة · 2.5D بالعرض</p>
           <h1>المزارع شايف</h1>
-          <p class="tagline">امشِ · ازرع · اركب السيارة · ابنِ مزرعتك</p>
+          <p class="tagline">ازرع · صنّع · بِع · سلّم · ابنِ قريتك</p>
           <div class="menu-actions">
             <button id="btn-start" class="btn btn-play" type="button">ابدأ اللعبة</button>
             <button id="btn-menu-settings" class="btn btn-menu" type="button">الإعدادات</button>
@@ -41,13 +41,21 @@
         <canvas id="view"></canvas>
         <header class="hud">
           <div class="chips">
-            <button class="chip coin" id="chip-coins" type="button"><span class="ico">🪙</span><b id="hud-coins">0</b></button>
+            <button class="chip coin" id="chip-coins" type="button"><span class="ico">🪙</span><span class="chip-lab">ذهب</span><b id="hud-coins">0</b></button>
             <button class="chip gem" id="chip-gems" type="button"><span class="ico">💎</span><b id="hud-gems">0</b></button>
           </div>
-          <button class="lvl" id="chip-level" type="button"><span>مستوى</span><strong id="hud-level">1</strong></button>
-          <button class="gear" id="btn-settings" type="button" aria-label="إعدادات">⚙</button>
           <div class="xp"><div class="xp-bar"><i id="xp-fill"></i></div><small id="xp-label">0 / 20</small></div>
+          <button class="lvl" id="chip-level" type="button"><span>مستوى</span><strong id="hud-level">1</strong></button>
+          <div class="hud-clock" id="hud-clock">النهار</div>
+          <button class="gear" id="btn-settings" type="button" aria-label="إعدادات">⚙</button>
         </header>
+        <div id="quest-track" class="quest-track hidden"></div>
+        <nav id="dock" class="dock" aria-label="القوائم">
+          <button type="button" data-dock="craft"><span>🏭</span><small>تصنيع</small></button>
+          <button type="button" data-dock="shop"><span>🛒</span><small>السوق</small></button>
+          <button type="button" data-dock="quests"><span>📜</span><small>مهام</small></button>
+          <button type="button" data-dock="barn"><span>📦</span><small>المخزن</small></button>
+        </nav>
         <div id="speech" class="speech hidden"></div>
         <div id="seed-tray" class="seed-tray" data-hud="tray"></div>
         <div id="joy" class="joy" data-hud="joy"><div class="joy-base"><div class="joy-knob" id="joy-knob"></div></div></div>

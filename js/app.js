@@ -1,9 +1,9 @@
 /* المزارع شايف — 2.5D بالعرض، توسّع تدريجي، أنيميشن */
 (() => {
   const SAVE_KEY = "al-muzare-shayef-v1";
-  const MW = 36, MH = 30, TW = 70, TH = 35, DEPTH = 10;
+  const MW = 48, MH = 40, TW = 70, TH = 35, DEPTH = 10;
   const PLOTX = 12, PLOTY = 10;
-  const Y0 = { x0: 4, x1: 18, y0: 4, y1: 16 };
+  const Y0 = { x0: 4, x1: 20, y0: 4, y1: 18 };
   const TRUCK = { x: 9.4, y: 12.3 };
   const DROP = { x: 5.4, y: 14.2 };
 
@@ -23,20 +23,52 @@
     roses: { id: "roses", name: "ورد بلدي", emoji: "🌹", seed: 100, sell: 290, xp: 50, grow: 50000, lv: 12, color: "#d81b60" },
   };
   const ANIMALS = {
-    chicken: { id: "chicken", name: "دجاجة", emoji: "🐔", product: "🥚", productName: "بيض", cost: 180, lv: 4, interval: 35000, sell: 14, xp: 4, max: 2, need: "coop" },
-    cow: { id: "cow", name: "بقرة", emoji: "🐄", product: "🥛", productName: "حليب", cost: 550, lv: 7, interval: 60000, sell: 38, xp: 8, max: 1, need: "cowpen" },
-    goat: { id: "goat", name: "ماعز", emoji: "🐐", product: "🧀", productName: "جبن", cost: 1100, lv: 10, interval: 80000, sell: 65, xp: 12, max: 1, need: "goatpen" },
+    chicken: { id: "chicken", name: "دجاجة", emoji: "🐔", product: "🥚", productName: "بيض", item: "egg", cost: 180, lv: 4, interval: 35000, sell: 14, xp: 4, max: 2, need: "coop" },
+    cow: { id: "cow", name: "بقرة", emoji: "🐄", product: "🥛", productName: "حليب", item: "milk", cost: 550, lv: 7, interval: 60000, sell: 38, xp: 8, max: 1, need: "cowpen" },
+    goat: { id: "goat", name: "ماعز", emoji: "🐐", product: "🥛", productName: "حليب ماعز", item: "goatmilk", cost: 1100, lv: 10, interval: 80000, sell: 48, xp: 12, max: 1, need: "goatpen" },
   };
+  const GOODS = {
+    egg: { id: "egg", name: "بيض", emoji: "🥚", sell: 16 },
+    milk: { id: "milk", name: "حليب", emoji: "🥛", sell: 40 },
+    goatmilk: { id: "goatmilk", name: "حليب ماعز", emoji: "🥛", sell: 50 },
+    flour: { id: "flour", name: "دقيق", emoji: "🌾", sell: 22 },
+    bread: { id: "bread", name: "خبز بلدي", emoji: "🍞", sell: 48 },
+    butter: { id: "butter", name: "زبدة", emoji: "🧈", sell: 70 },
+    cheese: { id: "cheese", name: "جبن", emoji: "🧀", sell: 85 },
+    jam: { id: "jam", name: "مربى", emoji: "🍓", sell: 95 },
+    juice: { id: "juice", name: "عصير عنب", emoji: "🧃", sell: 110 },
+    cake: { id: "cake", name: "كعكة", emoji: "🍰", sell: 160 },
+    coffee_cup: { id: "coffee_cup", name: "قهوة محمصة", emoji: "☕", sell: 240 },
+  };
+  const RECIPES = [
+    { id: "flour", name: "طحن الدقيق", site: "mill", time: 8000, xp: 5, in: { wheat: 2 }, out: { flour: 1 } },
+    { id: "bread", name: "خبز الفرن", site: "barn", time: 10000, xp: 8, in: { flour: 2 }, out: { bread: 1 } },
+    { id: "cake", name: "كعكة القرية", site: "barn", time: 14000, xp: 16, in: { flour: 1, egg: 1, strawberry: 1 }, out: { cake: 1 } },
+    { id: "butter", name: "خضّ الزبدة", site: "cowpen", time: 12000, xp: 10, in: { milk: 2 }, out: { butter: 1 } },
+    { id: "cheese", name: "تصنيع الجبن", site: "goatpen", time: 14000, xp: 12, in: { goatmilk: 2 }, out: { cheese: 1 } },
+    { id: "jam", name: "مربى الفراولة", site: "shop", time: 9000, xp: 9, in: { strawberry: 2 }, out: { jam: 1 } },
+    { id: "juice", name: "عصير العنب", site: "cafe", time: 9000, xp: 10, in: { grapes: 2 }, out: { juice: 1 } },
+    { id: "coffee_cup", name: "تحميص البن", site: "cafe", time: 12000, xp: 18, in: { coffee: 1 }, out: { coffee_cup: 1 } },
+  ];
+  const NPCS = [
+    { id: "layla", name: "ليلى", emoji: "🧕", x: 23.4, y: 8.4, line: "أبي خبز طازج للمدرسة." },
+    { id: "salem", name: "سالم", emoji: "🧔", x: 25.6, y: 10.3, line: "المقهى يطلب مؤونة اليوم." },
+    { id: "noura", name: "نورة", emoji: "👩‍🌾", x: 22.6, y: 11.6, line: "عندي طلب للسوق، تقدر تجيبه؟" },
+  ];
   const SITES = [
     { id: "well", name: "البئر", x: 10, y: 8, w: 1, h: 1, lv: 2, cost: 90 },
+    { id: "warehouse", name: "المخزن", x: 8, y: 16, w: 2, h: 2, lv: 3, cost: 160 },
     { id: "shop", name: "كشك السوق", x: 20, y: 6, w: 2, h: 2, lv: 3, cost: 200 },
     { id: "coop", name: "بيت البيض", x: 6, y: 18, w: 3, h: 2, lv: 4, cost: 220 },
     { id: "barn", name: "المخبز", x: 21, y: 12, w: 3, h: 2, lv: 5, cost: 340 },
+    { id: "mill", name: "المطحنة", x: 15, y: 7, w: 2, h: 2, lv: 6, cost: 380 },
     { id: "cowpen", name: "مصنع الحليب", x: 12, y: 19, w: 3, h: 2, lv: 7, cost: 520 },
+    { id: "cafe", name: "مقهى القرية", x: 24, y: 7, w: 2, h: 2, lv: 8, cost: 640 },
     { id: "goatpen", name: "مصنع الجبن", x: 17, y: 19, w: 2, h: 2, lv: 9, cost: 460 },
   ];
   const PLOT_POS = [];
   for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) PLOT_POS.push({ x: PLOTX + c, y: PLOTY + r });
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) PLOT_POS.push({ x: 13 + c, y: 14 + r });
 
   const STORY = [
     { id: "p1", title: "البذرة الأولى", desc: "ازرع في الحقل الصغير جنب البيت", check: (s) => s.stats.planted >= 1, reward: { coins: 12, xp: 6 } },
@@ -50,8 +82,14 @@
     { id: "l5", title: "المخبز", desc: "ابنِ المخبز", check: (s) => s.built.barn, reward: { coins: 70, gems: 2 } },
     { id: "cof", title: "كنز اليمن", desc: "ازرع البن اليمني", check: (s) => (s.stats.plantedIds.coffee || 0) >= 1, reward: { coins: 120, gems: 3 } },
     { id: "del", title: "أول توصيلة", desc: "حمّل محصولاً في السيارة وسلّمه عند نقطة التوصيل", check: (s) => (s.stats.delivered || 0) >= 1, reward: { coins: 50, gems: 1 } },
+    { id: "wh", title: "المخزن", desc: "ابنِ المخزن لحفظ المحصول", check: (s) => s.built.warehouse, reward: { coins: 40, xp: 12 } },
+    { id: "mill", title: "أول دقيق", desc: "ابنِ المطحنة واصنع دقيقاً", check: (s) => (s.stats.craftedIds && s.stats.craftedIds.flour) >= 1, reward: { coins: 70, gems: 1 } },
+    { id: "bread", title: "خبز القرية", desc: "اخبز رغيف خبز في المخبز", check: (s) => (s.stats.craftedIds && s.stats.craftedIds.bread) >= 1, reward: { coins: 80, gems: 2 } },
+    { id: "npc", title: "طلب الجيران", desc: "سلّم طلباً لأحد أهل القرية", check: (s) => (s.stats.npcSold || 0) >= 1, reward: { coins: 90, gems: 1 } },
+    { id: "cafe", title: "مقهى شايف", desc: "ابنِ مقهى القرية", check: (s) => s.built.cafe, reward: { coins: 120, gems: 2 } },
     { id: "big", title: "أرض واسعة", desc: "افتح 20 خانة من الغابة", check: (s) => Object.keys(s.cleared || {}).length >= 20, reward: { coins: 120, gems: 2 } },
     { id: "pro", title: "المزارع المحترف", desc: "اوصل للمستوى 10", check: (s) => s.level >= 10, reward: { coins: 200, gems: 5 } },
+    { id: "city", title: "صاحب القرية", desc: "ابنِ 7 مبانٍ", check: (s) => Object.values(s.built || {}).filter(Boolean).length >= 7, reward: { coins: 300, gems: 6 } },
   ];
   const ACHIEVEMENTS = [
     { id: "first", title: "أول سنبلة", desc: "احصد محصولاً واحداً", check: (s) => s.stats.harvested >= 1, reward: { coins: 10 } },
@@ -72,6 +110,8 @@
     { id: "w3", title: "الري", desc: "اسقِ 3 مزروعات", key: "watered", add: 3, reward: { coins: 20 } },
     { id: "s4", title: "بيع سريع", desc: "بِع 4 محاصيل", key: "sold", add: 4, reward: { coins: 24 } },
     { id: "d1", title: "توصيلة اليوم", desc: "سلّم طلباً بالسيارة", key: "delivered", add: 1, reward: { coins: 30 } },
+    { id: "cr2", title: "ورشة اليوم", desc: "أنهِ عمليتي تصنيع", key: "crafted", add: 2, reward: { coins: 36, gems: 1 } },
+    { id: "n1", title: "خدمة الجيران", desc: "سلّم طلباً للقرويين", key: "npcSold", add: 1, reward: { coins: 40 } },
   ];
 
   const $ = (s, r = document) => r.querySelector(s);
@@ -90,17 +130,18 @@
   const imgShayef = new Image(); imgShayef.src = "img/shayef.png";
 
   function defaultState() {
-    const plots = Array.from({ length: 25 }, () => ({ unlocked: false, crop: null }));
+    const plots = Array.from({ length: PLOT_POS.length }, () => ({ unlocked: false, crop: null }));
     [0, 1, 5, 6].forEach((i) => (plots[i].unlocked = true));
     return {
-      v: 3, coins: 55, gems: 5, xp: 0, level: 1,
-      seeds: { wheat: 5, carrot: 2 }, items: {}, plots,
+      v: 4, coins: 80, gems: 6, xp: 0, level: 1,
+      seeds: { wheat: 8, carrot: 3 }, items: {}, plots,
       animals: { chicken: { owned: 0, readyAt: 0 }, cow: { owned: 0, readyAt: 0 }, goat: { owned: 0, readyAt: 0 } },
       upgrades: { scarecrow: false, well: false, barn: false },
-      built: { well: false, shop: false, coop: false, barn: false, cowpen: false, goatpen: false },
+      built: { well: false, shop: false, coop: false, barn: false, cowpen: false, goatpen: false, mill: false, cafe: false, warehouse: false },
+      craft: {}, npcOrders: {},
       cleared: {},
       story: 0, dailyDate: "", daily: [],
-      stats: { planted: 0, harvested: 0, sold: 0, earned: 0, watered: 0, chopped: 0, delivered: 0, plantedIds: {}, harvestedIds: {} },
+      stats: { planted: 0, harvested: 0, sold: 0, earned: 0, watered: 0, chopped: 0, delivered: 0, crafted: 0, npcSold: 0, plantedIds: {}, harvestedIds: {}, craftedIds: {} },
       order: null,
       achievements: {}, tutorial: 0, lastLogin: "", streak: 0, sound: true,
       ui: { musicOn: true, musicVol: 0.4, sfxVol: 0.7, joySide: "left", ctrlScale: 1, custom: false, pos: {} },
@@ -113,16 +154,19 @@
       if (!raw) return defaultState();
       const s = JSON.parse(raw);
       const d = defaultState();
-      const plots = Array.isArray(s.plots) && s.plots.length === 25 ? s.plots : d.plots;
+      let plots = Array.isArray(s.plots) ? s.plots : d.plots;
+      while (plots.length < PLOT_POS.length) plots.push({ unlocked: false, crop: null });
       if (s.v < 3) { [0, 1, 5, 6].forEach((i) => (plots[i].unlocked = true)); }
       return {
-        ...d, ...s, v: 3,
+        ...d, ...s, v: 4,
         seeds: { ...d.seeds, ...(s.seeds || {}) }, items: s.items || {},
         plots, animals: { ...d.animals, ...(s.animals || {}) },
         upgrades: { ...d.upgrades, ...(s.upgrades || {}) },
         built: { ...d.built, ...(s.built || {}) },
+        craft: { ...d.craft, ...(s.craft || {}) },
+        npcOrders: s.npcOrders || {},
         cleared: s.cleared || {},
-        stats: { ...d.stats, ...(s.stats || {}), plantedIds: { ...(s.stats && s.stats.plantedIds) }, harvestedIds: { ...(s.stats && s.stats.harvestedIds) } },
+        stats: { ...d.stats, ...(s.stats || {}), plantedIds: { ...(s.stats && s.stats.plantedIds) }, harvestedIds: { ...(s.stats && s.stats.harvestedIds) }, craftedIds: { ...(s.stats && s.stats.craftedIds) } },
         order: s.order || null,
         ui: { ...d.ui, ...(s.ui || {}), pos: { ...(d.ui.pos || {}), ...((s.ui && s.ui.pos) || {}) } },
         achievements: s.achievements || {},
@@ -141,7 +185,20 @@
   function unlockedCount() { return state.plots.filter((p) => p.unlocked).length; }
   function animalTotal() { return state.animals.chicken.owned + state.animals.cow.owned + state.animals.goat.owned; }
   function xpNeeded(lv) { return Math.round(22 * Math.pow(lv, 1.42)); }
+  function catalog(id) { return CROPS[id] || GOODS[id] || null; }
   function sellPrice(crop) { return state.built.barn || state.upgrades.barn ? Math.round(crop.sell * 1.15) : crop.sell; }
+  function sellPriceOf(id) {
+    const it = catalog(id); if (!it) return 0;
+    const bonus = state.built.shop ? 1.08 : 1;
+    return Math.round((it.sell || 0) * (CROPS[id] && (state.built.barn || state.upgrades.barn) ? 1.15 : 1) * bonus);
+  }
+  function dayPhase() {
+    const p = ((Date.now() / 1000) % 240) / 240;
+    if (p < 0.18) return { id: "dawn", name: "الفجر", sky: ["#f6b27a", "#ffe0a8", "#8edc5c"] };
+    if (p < 0.55) return { id: "day", name: "النهار", sky: ["#5ec8f0", "#d8f5c4", "#8edc5c"] };
+    if (p < 0.72) return { id: "dusk", name: "الأصيل", sky: ["#e07a4a", "#ffd19a", "#6db35a"] };
+    return { id: "night", name: "الليل", sky: ["#1b2a58", "#3d4d7a", "#2e5a32"] };
+  }
   function todayStr() { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; }
   function hash(str) { let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0; return Math.abs(h); }
   function formatTime(ms) { const s = Math.max(0, Math.ceil(ms / 1000)); return s < 60 ? s + "ث" : Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
@@ -393,8 +450,9 @@
   function collectAnimal(id) {
     const a = ANIMALS[id], st = state.animals[id];
     if (!st.owned || Date.now() < st.readyAt) return;
-    addCoins(a.sell * st.owned); addXp(a.xp * st.owned);
-    st.readyAt = Date.now() + a.interval; sfx("coin"); toast(`+${a.sell * st.owned} من ${a.productName}`); checkProgress();
+    const n = st.owned;
+    addItem(a.item, n); addXp(a.xp * n);
+    st.readyAt = Date.now() + a.interval; sfx("coin"); toast(`+${n} ${a.productName}`); checkProgress();
   }
   function buyAnimal(id) {
     const a = ANIMALS[id], st = state.animals[id];
@@ -412,7 +470,8 @@
   }
   function sellItem(id, qty) {
     const have = state.items[id] || 0; qty = Math.min(qty, have); if (!qty) return;
-    const gain = sellPrice(CROPS[id]) * qty; state.items[id] = have - qty;
+    const it = catalog(id); if (!it) return;
+    const gain = sellPriceOf(id) * qty; state.items[id] = have - qty;
     if (!state.items[id]) delete state.items[id];
     addCoins(gain); state.stats.sold += qty; sfx("coin"); toast(`بعت ${qty} مقابل ${gain}🪙`);
     if (state.tutorial === 6) setTutorial(7);
@@ -420,7 +479,7 @@
   }
   function sellAll() {
     let gain = 0, n = 0;
-    Object.keys(state.items).forEach((id) => { gain += sellPrice(CROPS[id]) * state.items[id]; n += state.items[id]; });
+    Object.keys(state.items).forEach((id) => { if (!catalog(id)) return; gain += sellPriceOf(id) * state.items[id]; n += state.items[id]; });
     if (!n) return toast("الصندوق فارغ");
     state.items = {}; addCoins(gain); state.stats.sold += n; sfx("coin"); toast(`بيع الكل: ${gain}🪙`);
     if (state.tutorial === 6) setTutorial(7); renderPanel(); checkProgress();
@@ -431,6 +490,79 @@
     if (state.upgrades[key]) return toast("تم");
     if (!spend(u.cost)) return; state.upgrades[key] = true; toast("تم: " + u.name); renderPanel();
   }
+
+  function recipesFor(site) { return RECIPES.filter((r) => r.site === site); }
+  function canCraft(r) {
+    if (!state.built[r.site]) return false;
+    return Object.entries(r.in).every(([id, n]) => (state.items[id] || 0) >= n);
+  }
+  function startCraft(rid) {
+    const r = RECIPES.find((x) => x.id === rid); if (!r) return;
+    if (!canCraft(r)) return toast("المواد لا تكفي");
+    if (state.craft[r.site] && Date.now() < state.craft[r.site].readyAt) return toast("الماكينة مشغولة");
+    Object.entries(r.in).forEach(([id, n]) => {
+      state.items[id] -= n; if (!state.items[id]) delete state.items[id];
+    });
+    state.craft[r.site] = { id: r.id, readyAt: Date.now() + r.time };
+    sfx("plant"); toast("بدأ: " + r.name); closeSheet(); renderPanel(); save();
+  }
+  function collectCraft(site) {
+    const job = state.craft[site]; if (!job) return;
+    if (Date.now() < job.readyAt) return toast("لسه ما جاهز");
+    const r = RECIPES.find((x) => x.id === job.id); if (!r) { state.craft[site] = null; return; }
+    Object.entries(r.out).forEach(([id, n]) => addItem(id, n));
+    addXp(r.xp);
+    state.stats.crafted = (state.stats.crafted || 0) + 1;
+    state.stats.craftedIds = state.stats.craftedIds || {};
+    state.stats.craftedIds[r.id] = (state.stats.craftedIds[r.id] || 0) + 1;
+    state.craft[site] = null;
+    const g = catalog(Object.keys(r.out)[0]);
+    flyEmoji(g ? g.emoji : "✨");
+    sfx("harvest"); toast("اكتمل: " + r.name); renderPanel(); checkProgress(); save();
+  }
+  function openCraftSheet(site) {
+    const s = SITES.find((x) => x.id === site);
+    const job = state.craft[site];
+    const list = recipesFor(site);
+    let html = "<h2 style=\"margin:0 0 8px\">🏭 " + (s ? s.name : "تصنيع") + "</h2>";
+    if (job) {
+      const r = RECIPES.find((x) => x.id === job.id);
+      const ready = Date.now() >= job.readyAt;
+      html += "<div class=\"quest\"><h3>" + (r ? r.name : "جاري") + "</h3><p>" + (ready ? "جاهز للاستلام" : "باقي " + formatTime(job.readyAt - Date.now())) + "</p><div class=\"actions\"><button class=\"btn\" data-craft-collect=\"" + site + "\">" + (ready ? "استلم" : "انتظر") + "</button></div></div>";
+    }
+    html += list.map((r) => {
+      const need = Object.entries(r.in).map(([id, n]) => ((catalog(id) && catalog(id).emoji) || "") + " " + n).join(" + ");
+      const outId = Object.keys(r.out)[0];
+      const out = catalog(outId);
+      const ok = canCraft(r) && !job;
+      return "<div class=\"card\"><div class=\"ce\">" + ((out && out.emoji) || "🏭") + "</div><div><h3>" + r.name + "</h3><p>" + need + " ← " + ((out && out.name) || outId) + "</p><div class=\"meta\">" + formatTime(r.time) + " · +" + r.xp + "XP · بيع " + sellPriceOf(outId) + "🪙</div></div><div>" + (ok ? "<button class=\"btn tiny\" data-craft=\"" + r.id + "\">ابدأ</button>" : "<div class=\"lock-note\">" + (job ? "مشغول" : "مواد") + "</div>") + "</div></div>";
+    }).join("");
+    openSheet(html);
+  }
+  function ensureNpcOrders() {
+    if (!state.npcOrders) state.npcOrders = {};
+    const pool = ["wheat", "carrot", "bread", "egg", "milk", "flour", "jam", "juice", "cheese", "cake"].filter((id) => catalog(id));
+    NPCS.forEach((n, i) => {
+      const cur = state.npcOrders[n.id];
+      if (cur && !cur.done) return;
+      const id = pool[(hash(todayStr() + n.id + i) + state.level) % pool.length];
+      const qty = 1 + (hash(n.id + todayStr()) % 2);
+      state.npcOrders[n.id] = { id, n: qty, pay: sellPriceOf(id) * qty + 18 + state.level * 2, done: false };
+    });
+  }
+  function fulfillNpc(nid) {
+    const n = NPCS.find((x) => x.id === nid); if (!n) return;
+    ensureNpcOrders();
+    const o = state.npcOrders[nid]; if (!o || o.done) return toast("ما عنده طلب الآن");
+    if ((state.items[o.id] || 0) < o.n) return toast("ما عندك الكمية");
+    state.items[o.id] -= o.n; if (!state.items[o.id]) delete state.items[o.id];
+    addCoins(o.pay); addXp(10);
+    o.done = true;
+    state.stats.npcSold = (state.stats.npcSold || 0) + 1;
+    sfx("level"); toast(n.name + " استلمت الطلب +" + o.pay + "🪙");
+    checkProgress(); save();
+  }
+
 
   function refreshDaily() {
     const t = todayStr(); if (state.dailyDate === t && state.daily.length) return;
@@ -511,6 +643,9 @@
     if (map[14] && map[14][5]) map[14][5] = { t: "path" };
     for (let x = 8; x <= 11; x++) if (map[12] && map[12][x] && (map[12][x].t === "grass" || map[12][x].t === "path")) map[12][x] = { t: "path" };
     for (let x = 5; x <= 9; x++) if (map[14] && map[14][x] && (map[14][x].t === "grass" || map[14][x].t === "path")) map[14][x] = { t: "path" };
+    for (let x = 13; x <= 24; x++) if (map[8] && map[8][x] && (map[8][x].t === "grass" || map[8][x].t === "path")) map[8][x] = { t: "path" };
+    for (let y = 7; y <= 12; y++) if (map[y] && map[y][22] && (map[y][22].t === "grass" || map[y][22].t === "path")) map[y][22] = { t: "path" };
+    for (let x = 22; x <= 26; x++) if (map[10] && map[10][x] && (map[10][x].t === "grass" || map[10][x].t === "path")) map[10][x] = { t: "path" };
     for (let y = 6; y <= 8; y++) for (let x = 6; x <= 8; x++) if (isOpen(x, y)) map[y][x] = { t: "house" };
     PLOT_POS.forEach((p, i) => {
       if (!isOpen(p.x, p.y)) return;
@@ -587,6 +722,11 @@
       const d = Math.hypot(player.x - f.x, player.y - f.y);
       if (d < 0.95 && d < bestD) { bestD = d; best = { type: "animal", id: f.id, x: f.x, y: f.y }; }
     });
+    NPCS.forEach((n) => {
+      if (!isOpen(n.x, n.y)) return;
+      const d = Math.hypot(player.x - n.x, player.y - n.y);
+      if (d < 1.15 && d < bestD) { bestD = d; best = { type: "npc", id: n.id, x: n.x, y: n.y }; }
+    });
     if (mode === "world") {
       const tx = player.riding ? player.x : truckPos.x, ty = player.riding ? player.y : truckPos.y;
       const dt = Math.hypot(player.x - tx, player.y - ty);
@@ -600,8 +740,8 @@
   function cargoValue() {
     let n = 0, v = 0;
     Object.keys(state.items || {}).forEach((id) => {
-      const q = state.items[id] || 0; if (!q || !CROPS[id]) return;
-      n += q; v += sellPrice(CROPS[id]) * q;
+      const q = state.items[id] || 0; if (!q || !catalog(id)) return;
+      n += q; v += sellPriceOf(id) * q;
     });
     return { n, v };
   }
@@ -662,10 +802,15 @@
       } };
     }
     if (f.type === "built") {
-      if (f.id === "shop") return { ico: "🛒", lab: "السوق", ready: true, run: () => setTab("shop") };
-      if (f.id === "barn") return { ico: "🏚️", lab: "الحظيرة", ready: true, run: () => setTab("barn") };
+      if (f.id === "shop") return { ico: "🛒", lab: "السوق", ready: true, run: () => { shopSeg = "seeds"; setTab("shop"); } };
+      if (f.id === "warehouse") return { ico: "📦", lab: "المخزن", ready: true, run: () => setTab("barn") };
       if (f.id === "well") return { ico: "🪣", lab: "البئر", ready: true, run: () => { sfx("water"); say("ماء عذب للمزرعة."); } };
-      if (f.id === "coop" || f.id === "cowpen" || f.id === "goatpen") return { ico: "🐾", lab: "الزريبة", ready: true, run: () => { shopSeg = "animals"; setTab("shop"); } };
+      if (f.id === "coop") return { ico: "🐾", lab: "الزريبة", ready: true, run: () => { shopSeg = "animals"; setTab("shop"); } };
+      if (f.id === "mill" || f.id === "barn" || f.id === "cafe" || f.id === "cowpen" || f.id === "goatpen") {
+        const job = state.craft[f.id];
+        if (job && Date.now() >= job.readyAt) return { ico: "✨", lab: "استلم", ready: true, run: () => collectCraft(f.id) };
+        return { ico: "🏭", lab: "تصنيع", ready: true, run: () => openCraftSheet(f.id) };
+      }
     }
     if (f.type === "door") return { ico: "🚪", lab: mode === "house" ? "اخرج" : "ادخل", ready: true, run: toggleHouse };
     if (f.type === "bed") return { ico: "🛏️", lab: "ارتاح", ready: true, run: () => { save(); say("شايف ارتاح، والمزرعة انحفظت."); sfx("coin"); } };
@@ -687,6 +832,13 @@
       const a = ANIMALS[f.id], st = state.animals[f.id];
       if (st.owned && Date.now() >= st.readyAt) return { ico: a.product, lab: "اجمع", ready: true, run: () => collectAnimal(f.id) };
       return { ico: a.emoji, lab: a.name, ready: false, run: () => toast("لسه ما جاهز") };
+    }
+    if (f.type === "npc") {
+      const n = NPCS.find((x) => x.id === f.id);
+      ensureNpcOrders();
+      const o = state.npcOrders[f.id];
+      if (o && !o.done) return { ico: catalog(o.id)?.emoji || "📦", lab: "سلّم", ready: true, run: () => fulfillNpc(f.id) };
+      return { ico: n.emoji, lab: n.name, ready: true, run: () => say(n.line) };
     }
     return { ico: "✋", lab: "تفاعل", ready: false, run: null };
   }
@@ -802,6 +954,7 @@
     $("#act-ico").textContent = a.ico; $("#act-lab").textContent = a.lab;
     $("#btn-act").classList.toggle("ready", !!a.ready);
     $("#btn-act").classList.toggle("off", !a.run);
+    const clk = $("#hud-clock"); if (clk) clk.textContent = dayPhase().name;
   }
 
   /* ===== Draw ===== */
@@ -902,11 +1055,17 @@
     const c = ctx, t = time / 1000;
     c.clearRect(0, 0, viewW, viewH);
     if (mode === "house") { drawHouseInside(c, t); return; }
+    const phase = dayPhase();
     const g = c.createLinearGradient(0, 0, 0, viewH);
-    g.addColorStop(0, "#5ec8f0"); g.addColorStop(0.34, "#d8f5c4"); g.addColorStop(1, "#8edc5c");
+    g.addColorStop(0, phase.sky[0]); g.addColorStop(0.34, phase.sky[1]); g.addColorStop(1, phase.sky[2]);
     c.fillStyle = g; c.fillRect(0, 0, viewW, viewH);
-    c.fillStyle = "#ffe082"; c.beginPath(); c.arc(viewW * 0.12, 64, 26, 0, 7); c.fill();
-    c.fillStyle = "rgba(255,255,255,.35)"; c.beginPath(); c.arc(viewW * 0.12 - 6, 58, 8, 0, 7); c.fill();
+    if (phase.id === "night") {
+      c.fillStyle = "#f5f0c8"; c.beginPath(); c.arc(viewW * 0.14, 52, 16, 0, 7); c.fill();
+    } else {
+      c.fillStyle = phase.id === "dusk" ? "#ff8a50" : "#ffe082";
+      c.beginPath(); c.arc(viewW * 0.12, 64, 26, 0, 7); c.fill();
+      c.fillStyle = "rgba(255,255,255,.35)"; c.beginPath(); c.arc(viewW * 0.12 - 6, 58, 8, 0, 7); c.fill();
+    }
     clouds.forEach((cl) => {
       c.fillStyle = "rgba(255,255,255,.82)";
       c.beginPath(); c.ellipse(cl.x, cl.y, 32 * cl.s, 13 * cl.s, 0, 0, 7); c.fill();
@@ -982,6 +1141,7 @@
     const tzx = player.riding ? player.x : truckPos.x, tzy = player.riding ? player.y : truckPos.y;
     sprites.push({ z: tzx + tzy + 0.35, draw: () => drawTruck(c, tzx, tzy, t) });
     fauna.forEach((f) => sprites.push({ z: f.x + f.y + (f.z || 0) / 90, draw: () => drawFauna(c, f, t) }));
+    NPCS.forEach((n) => { if (isOpen(n.x, n.y)) sprites.push({ z: n.x + n.y + 0.3, draw: () => drawNpc(c, n, t) }); });
     if (!player.riding) sprites.push({ z: player.x + player.y + 0.4, draw: () => drawShayef(c, t) });
     bits.forEach((b) => sprites.push({ z: b.x + b.y + 1, draw: () => {
       const p = toScreen(b.x, b.y); c.globalAlpha = Math.max(0, b.life);
@@ -1239,6 +1399,41 @@
   }
   function drawBuilt(c, s, t) {
     const mid = toScreen(s.x + s.w / 2, s.y + s.h / 2);
+    const job = state.craft[s.id];
+    if (s.id === "mill") {
+      drawBuildingBox(c, s.x, s.y, s.w, s.h, 40, "#d7ccc8", "#a1887f", "#8d6e63");
+      const p = toScreen(s.x + 1, s.y + 1.4);
+      ink(c);
+      c.fillStyle = "#90caf9";
+      c.beginPath(); c.arc(p.x + 10, p.y - 18, 16, 0, 7); c.fill(); c.stroke();
+      c.strokeStyle = "#5d4037"; c.lineWidth = 3;
+      c.save(); c.translate(p.x + 10, p.y - 18); c.rotate(t * 1.6);
+      c.beginPath(); c.moveTo(-16, 0); c.lineTo(16, 0); c.moveTo(0, -16); c.lineTo(0, 16); c.stroke();
+      c.restore();
+      label(c, "المطحنة", p.x, p.y - 58);
+      if (job) label(c, Date.now() >= job.readyAt ? "جاهز" : "يطحن...", p.x, p.y + 16, "#fff59d");
+      return;
+    }
+    if (s.id === "cafe") {
+      drawBuildingBox(c, s.x, s.y, s.w, s.h, 36, "#efebe9", "#d7ccc8", "#6d4c41");
+      const p = toScreen(s.x + 1, s.y + 1.6);
+      ink(c);
+      c.fillStyle = "#5d4037"; c.fillRect(p.x - 10, p.y - 18, 20, 16); c.strokeRect(p.x - 10, p.y - 18, 20, 16);
+      c.fillStyle = "#fff8e1"; c.beginPath(); c.ellipse(p.x, p.y - 28, 10, 6, 0, 0, 7); c.fill(); c.stroke();
+      c.fillStyle = "#6d4c41"; c.fillRect(p.x + 14, p.y - 12, 10, 8);
+      label(c, "المقهى", p.x, p.y - 52);
+      if (job) label(c, Date.now() >= job.readyAt ? "جاهز" : "يحضّر...", p.x, p.y + 14, "#fff59d");
+      return;
+    }
+    if (s.id === "warehouse") {
+      drawBuildingBox(c, s.x, s.y, s.w, s.h, 32, "#bcaaa4", "#8d6e63", "#5d4037");
+      const p = toScreen(s.x + 1, s.y + 1.5);
+      ink(c); c.fillStyle = "#6d4c41";
+      c.fillRect(p.x - 16, p.y - 10, 14, 10); c.fillRect(p.x + 2, p.y - 14, 14, 14);
+      c.fillStyle = "#ffd54f"; c.fillRect(p.x - 4, p.y - 6, 6, 4);
+      label(c, "المخزن", p.x, p.y - 44);
+      return;
+    }
     if (s.id === "well") {
       const p = toScreen(s.x + 0.5, s.y + 0.5);
       c.fillStyle = "rgba(40,90,20,.16)"; c.beginPath(); c.ellipse(p.x, p.y + 6, 18, 8, 0, 0, 7); c.fill();
@@ -1514,6 +1709,27 @@
     c.restore();
   }
 
+
+  function drawNpc(c, n, t) {
+    const p = toScreen(n.x, n.y);
+    const bob = Math.sin(t * 2 + n.x) * 1.2;
+    c.fillStyle = "rgba(0,0,0,.22)"; c.beginPath(); c.ellipse(p.x, p.y + 6, 12, 5, 0, 0, 7); c.fill();
+    c.save(); c.translate(p.x, p.y - bob);
+    c.fillStyle = n.id === "salem" ? "#1565c0" : n.id === "noura" ? "#c62828" : "#6a1b9a";
+    c.beginPath(); c.moveTo(-9, -6); c.lineTo(-8, -28); c.lineTo(8, -28); c.lineTo(9, -6); c.closePath(); c.fill();
+    c.fillStyle = "#e0b089"; c.beginPath(); c.arc(0, -34, 8, 0, 7); c.fill();
+    c.fillStyle = "#3e2723"; c.beginPath(); c.arc(-3, -35, 1.4, 0, 7); c.fill(); c.beginPath(); c.arc(3, -35, 1.4, 0, 7); c.fill();
+    c.font = "16px sans-serif"; c.textAlign = "center"; c.fillText(n.emoji, 0, -44);
+    const o = state.npcOrders && state.npcOrders[n.id];
+    if (o && !o.done) {
+      c.fillStyle = "#fff"; c.beginPath(); c.arc(10, -48, 8, 0, 7); c.fill();
+      c.font = "12px sans-serif"; c.fillText((catalog(o.id) && catalog(o.id).emoji) || "!", 10, -44);
+    }
+    c.restore();
+    c.font = "10px Tahoma"; c.fillStyle = "#fffde7"; c.textAlign = "center";
+    c.lineWidth = 3; c.strokeStyle = "#2a1508"; c.strokeText(n.name, p.x, p.y - 56); c.fillText(n.name, p.x, p.y - 56);
+  }
+
   function drawFauna(c, f, t) {
     const p = toScreen(f.x, f.y);
     if (f.kind === "butterfly") {
@@ -1636,6 +1852,17 @@
   function hud() {
     $("#hud-coins").textContent = state.coins; $("#hud-gems").textContent = state.gems; $("#hud-level").textContent = state.level;
     const need = xpNeeded(state.level); $("#xp-fill").style.width = Math.min(100, (state.xp / need) * 100) + "%"; $("#xp-label").textContent = state.xp + " / " + need;
+    const clk = $("#hud-clock"); if (clk) clk.textContent = dayPhase().name;
+    const qt = $("#quest-track");
+    if (qt) {
+      const q = STORY[state.story];
+      if (!q) { qt.classList.add("hidden"); }
+      else {
+        qt.classList.remove("hidden");
+        const ready = q.check(state);
+        qt.innerHTML = `<b>${q.title}</b><span>${q.desc}</span><div class="qt-bar"><i style="width:${ready ? 100 : 40}%"></i></div>`;
+      }
+    }
   }
   function renderTray() {
     const owned = Object.values(CROPS).filter((c) => (state.seeds[c.id] || 0) > 0 && state.level >= c.lv);
@@ -1645,8 +1872,8 @@
   function renderPanel() {
     if (activeTab === "farm") { $("#panel").classList.add("hidden"); return; }
     $("#panel").classList.remove("hidden");
-    $("#panel-title").textContent = { shop: "البذور والسوق", quests: "المهام", barn: "الصندوق" }[activeTab];
-    if (activeTab === "shop") renderShop(); if (activeTab === "quests") renderQuests(); if (activeTab === "barn") renderBarn();
+    $("#panel-title").textContent = { shop: "البذور والسوق", quests: "المهام", barn: "المخزن", craft: "التصنيع" }[activeTab];
+    if (activeTab === "shop") renderShop(); if (activeTab === "quests") renderQuests(); if (activeTab === "barn") renderBarn(); if (activeTab === "craft") renderCraft();
   }
   function renderShop() {
     const segs = [["seeds", "بذور"], ["build", "بناء"], ["animals", "حيوانات"], ["up", "تحسين"]];
@@ -1666,6 +1893,19 @@
     if (shopSeg === "up") html += `<div class="card"><div class="ce">🎃</div><div><h3>الفزاعة</h3><p>+10٪ خبرة</p></div><div>${state.upgrades.scarecrow ? `<div class="lock-note">تم</div>` : `<button class="btn tiny" data-up="scarecrow">220🪙</button>`}</div></div>`;
     $("#panel-body").innerHTML = html;
   }
+
+  function renderCraft() {
+    const sites = ["mill", "barn", "cowpen", "goatpen", "cafe", "shop"].filter((id) => recipesFor(id).length);
+    let html = "<p style=\"margin:0 0 8px;font-weight:800;color:#7a5a40\">سلسلة الإنتاج: ازرع ← احصد ← صنّع ← بِع أو سلّم</p>";
+    sites.forEach((id) => {
+      const s = SITES.find((x) => x.id === id);
+      const job = state.craft[id];
+      const ready = job && Date.now() >= job.readyAt;
+      html += "<div class=\"card\"><div class=\"ce\">🏭</div><div><h3>" + s.name + "</h3><p>" + (state.built[id] ? (job ? (ready ? "جاهز للاستلام" : "يعمل الآن") : recipesFor(id).length + " وصفات") : "يلزم البناء · مستوى " + s.lv) + "</p></div><div>" + (!state.built[id] ? "<div class=\"lock-note\">مقفل</div>" : ready ? "<button class=\"btn tiny\" data-craft-collect=\"" + id + "\">استلم</button>" : "<button class=\"btn tiny\" data-open-craft=\"" + id + "\">افتح</button>") + "</div></div>";
+    });
+    $("#panel-body").innerHTML = html;
+  }
+
   function renderQuests() {
     const segs = [["story", "رحلة شايف"], ["daily", "اليوم"], ["ach", "إنجازات"]];
     let html = `<div class="seg">${segs.map(([id, n]) => `<button data-questseg="${id}" class="${questSeg === id ? "on" : ""}">${n}</button>`).join("")}</div>`;
@@ -1682,7 +1922,7 @@
     const ids = Object.keys(state.items).filter((id) => state.items[id] > 0);
     if (!ids.length) { $("#panel-body").innerHTML = `<div class="empty-state"><div class="ee">📦</div><p>الصندوق فارغ. احصد ثم عُد.</p></div>`; return; }
     let html = `<button class="btn" data-sell-all="1" style="width:100%;margin-bottom:8px">بيع الكل</button>`;
-    html += ids.map((id) => { const c = CROPS[id], q = state.items[id]; return `<div class="card"><div class="ce">${c.emoji}</div><div><h3>${c.name} ×${q}</h3><p>${sellPrice(c)}🪙 للحبة</p></div><div><button class="btn tiny" data-sell="${id}">بيع 1</button></div></div>`; }).join("");
+    html += ids.map((id) => { const c = catalog(id); if (!c) return ""; const q = state.items[id]; return `<div class="card"><div class="ce">${c.emoji}</div><div><h3>${c.name} ×${q}</h3><p>${sellPriceOf(id)}🪙 للحبة</p></div><div><button class="btn tiny" data-sell="${id}">بيع 1</button></div></div>`; }).join("");
     $("#panel-body").innerHTML = html;
   }
   function setTab(tab) { activeTab = tab; renderPanel(); sfx("click"); }
@@ -1735,6 +1975,17 @@
 
   function bind() {
     $("#btn-start").onclick = startGame;
+    const dock = $("#dock");
+    if (dock) dock.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-dock]"); if (!b) return;
+      const t = b.dataset.dock;
+      if (t === "craft") setTab("craft");
+      else if (t === "shop") { shopSeg = "seeds"; setTab("shop"); }
+      else if (t === "quests") { questSeg = "story"; setTab("quests"); }
+      else if (t === "barn") setTab("barn");
+    });
+    const qt = $("#quest-track");
+    if (qt) qt.onclick = () => { questSeg = "story"; setTab("quests"); };
     $("#btn-menu-settings").onclick = () => { unlockAudio(); openSettings(); };
     $("#menu").addEventListener("pointerdown", unlockAudio, { once: true });
     $("#btn-act").onclick = (e) => { e.preventDefault(); if ($("#game").classList.contains("layout-edit")) return; if (!uiOpen()) doAction(); };
@@ -1828,6 +2079,9 @@
       const pl = d("[data-plant]"); if (pl) { plant(+pl.dataset.plot, pl.dataset.plant); closeSheet(); }
       const ft = d("[data-fert]"); if (ft) fertilize(+ft.dataset.fert);
       const ins = d("[data-instant]"); if (ins) instant(+ins.dataset.instant);
+      const cr = d("[data-craft]"); if (cr) startCraft(cr.dataset.craft);
+      const cc = d("[data-craft-collect]"); if (cc) { collectCraft(cc.dataset.craftCollect); closeSheet(); }
+      const oc = d("[data-open-craft]"); if (oc) openCraftSheet(oc.dataset.openCraft);
     });
   }
 
@@ -1849,6 +2103,7 @@
     const ip = iso(player.x, player.y); cam.x = ip.sx; cam.y = ip.sy;
     resize(); rebuildMap(); ensureAnimalTimers(); spawnFauna();
     clouds = [{ x: 80, y: 36, s: 1, sp: 14 }, { x: 260, y: 58, s: 1.2, sp: 9 }, { x: 480, y: 28, s: 0.8, sp: 16 }];
+    ensureNpcOrders();
     hud(); renderTray(); running = true;
     const login = checkDailyLogin(); refreshDaily();
     if (state.tutorial === 0) setTutorial(1);

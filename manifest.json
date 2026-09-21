@@ -1,7 +1,7 @@
 {
   "name": "المزارع شايف",
   "short_name": "شايف",
-  "description": "مزرعة 2.5D بالعرض: امشِ، ازرع، ابنِ",
+  "description": "مزرعة ومدينة 2.5D: ازرع، صنّع، بِع، وسلّم الطلبات",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
