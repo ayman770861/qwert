@@ -1,4 +1,4 @@
-const CACHE = "shayef-v8";
+const CACHE = "shayef-v9";
 const ASSETS = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const ASSETS = [
   "./js/app.js",
   "./manifest.json",
   "./img/shayef.png",
+  "./img/house.png",
   "./img/menu-bg.jpg",
   "./img/icon-192.png",
   "./img/icon-512.png",
