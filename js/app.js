@@ -128,6 +128,7 @@
   const keys = {};
   let walkTo = null, fauna = [], bits = [], clouds = [], focus = null, lastT = 0;
   const imgShayef = new Image(); imgShayef.src = "img/shayef.png";
+  const imgPlayer = new Image(); imgPlayer.src = "img/player.png";
   const imgHouse = new Image(); imgHouse.src = "img/house.png";
 
   function starterPlots() {
@@ -660,7 +661,7 @@
           continue;
         }
         const gh = hash(x + "," + y);
-        map[y][x] = { t: "grass", flower: gh % 9 === 0, clover: gh % 7 === 0, pebble: gh % 17 === 0 };
+        map[y][x] = { t: "grass", flower: gh % 3 === 0, clover: gh % 4 === 0, pebble: gh % 19 === 0, bloom: gh % 5 };
       }
     }
     for (let x = 7; x <= 13; x++) if (map[9] && map[9][x] && map[9][x].t === "grass") map[9][x] = { t: "path" };
@@ -1001,7 +1002,7 @@
       const ox = ((h >> (i * 3)) % 13) - 6, oy = ((h >> (i * 2 + 1)) % 7) - 3;
       const sway = Math.sin((t || 0) * 2.1 + x * 0.55 + i) * 1.8 + bend;
       const hh = 6 + (h >> i) % 5;
-      c.strokeStyle = i % 4 === 0 ? "#8bc34a" : i % 4 === 1 ? "#66bb6a" : i % 4 === 2 ? "#43a047" : "#2e7d32";
+      c.strokeStyle = i % 4 === 0 ? "#9ccc65" : i % 4 === 1 ? "#7cb342" : i % 4 === 2 ? "#66bb6a" : "#2e7d32";
       c.beginPath();
       c.moveTo(p.x + ox, p.y + oy + 4);
       c.quadraticCurveTo(p.x + ox + sway * 0.4, p.y + oy - hh * 0.45, p.x + ox + sway, p.y + oy - hh);
@@ -1010,11 +1011,27 @@
   }
   function grassPalette(x, y) {
     const h = hash(x + "p" + y) % 5;
-    if (h === 0) return ["#4ecf5a", "#34a33c", "#1e7a28"];
-    if (h === 1) return ["#62d96a", "#3cb346", "#2e8b32"];
-    if (h === 2) return ["#3db84a", "#2e9b38", "#1b6e24"];
-    if (h === 3) return ["#58c85f", "#43a047", "#2e7d32"];
-    return ["#46c45a", "#388e3c", "#1b5e20"];
+    if (h === 0) return ["#7ed957", "#4caf50", "#2e7d32"];
+    if (h === 1) return ["#8be06a", "#66bb6a", "#388e3c"];
+    if (h === 2) return ["#6bcf4a", "#43a047", "#2e7d32"];
+    if (h === 3) return ["#9ad95c", "#7cb342", "#558b2f"];
+    return ["#62d26a", "#43a047", "#1b5e20"];
+  }
+  function drawPinkBloom(c, x, y, s, seed) {
+    const cols = ["#f8bbd0", "#f48fb1", "#f06292", "#ec407a", "#ffcdd2"];
+    c.save(); c.translate(x, y);
+    const sway = Math.sin((seed % 9) + x * 0.02) * 0.15;
+    c.rotate(sway);
+    c.fillStyle = cols[seed % cols.length];
+    for (let i = 0; i < 5; i++) {
+      const a = i * 1.2566;
+      c.beginPath();
+      c.ellipse(Math.cos(a) * s * 0.85, Math.sin(a) * s * 0.5, s * 0.55, s * 0.28, a, 0, 7);
+      c.fill();
+    }
+    c.fillStyle = "#fff59d";
+    c.beginPath(); c.arc(0, 0, s * 0.28, 0, 7); c.fill();
+    c.restore();
   }
   function drawBuildingBox(c, x, y, bw, bd, h, wall, wallD, roof) {
     const p0 = toScreen(x, y), pR = toScreen(x + bw, y), pF = toScreen(x + bw, y + bd), pL = toScreen(x, y + bd);
@@ -1114,14 +1131,18 @@
         drawBlock(c, p.x, p.y, shade(pal[0], -18), shade(pal[1], -12), shade(pal[2], -8));
         drawTufts(c, p, x, y, t);
       } else if (cell.t === "path") {
-        drawBlock(c, p.x, p.y, "#f3d5a0", "#d7a86a", "#c48a3a");
+        drawBlock(c, p.x, p.y, "#d7c48a", "#b89a5c", "#8d6e3a");
         const ph = hash(x + "s" + y);
         if (ph % 3 === 0) { c.fillStyle = "#c4a574"; c.beginPath(); c.ellipse(p.x + (ph % 7) - 3, p.y + 2, 3.2, 1.6, 0.2, 0, 7); c.fill(); }
       } else if (cell.t === "plot") {
         const pl = state.plots[cell.plot];
         drawBlock(c, p.x, p.y, isReady(pl) ? "#a97843" : "#5d4037", "#4e342e", "#3e2723");
       } else if (cell.t === "site") drawBlock(c, p.x, p.y, "#ffe082", "#ffca28", "#f9a825");
-      else {
+      else if (cell.t === "house") {
+        const pal = grassPalette(x + 1, y);
+        drawBlock(c, p.x, p.y, shade(pal[0], -14), shade(pal[1], -10), shade(pal[2], -8));
+        drawTufts(c, p, x, y, t);
+      } else {
         const pal = grassPalette(x, y);
         drawBlock(c, p.x, p.y, pal[0], pal[1], pal[2]);
         drawTufts(c, p, x, y, t);
@@ -1134,10 +1155,10 @@
         }
         if (cell.pebble) { c.fillStyle = "#cfd8dc"; c.beginPath(); c.ellipse(p.x - 6, p.y + 3, 3.5, 1.8, -0.3, 0, 7); c.fill(); }
         if (cell.flower) {
-          const cols = ["#ec407a", "#fff176", "#7e57c2", "#ff8a65", "#42a5f5"];
-          c.fillStyle = cols[(x * 3 + y) % cols.length];
-          c.beginPath(); c.arc(p.x + 5, p.y - 5, 2.4, 0, 7); c.fill();
-          c.fillStyle = "#fff59d"; c.beginPath(); c.arc(p.x + 5, p.y - 5, 1, 0, 7); c.fill();
+          drawPinkBloom(c, p.x + ((hash(x + "f") % 9) - 4), p.y - 4, 3.4 + (cell.bloom % 3) * 0.6, hash(x + "b" + y));
+          if (cell.bloom % 2 === 0) drawPinkBloom(c, p.x - 8, p.y + 2, 2.6, hash(y + "c" + x));
+        } else if ((x + y) % 4 === 1) {
+          drawPinkBloom(c, p.x + 6, p.y - 2, 2.2, x * 3 + y);
         }
       }
       if (focus && ((focus.type === "plot" && cell.plot === focus.i) || (focus.type === "place" && focus.x === x && focus.y === y) || ((focus.type === "forest" || focus.type === "rock" || focus.type === "bush" || focus.type === "wild") && focus.x === x && focus.y === y))) {
@@ -1255,29 +1276,36 @@
     }
   }
   function drawHouseExt(c, t) {
-    const door = toScreen(7.5, 8.95);
-    const base = toScreen(7.5, 8.55);
-    const sway = Math.sin(t * 0.9) * 0.6;
+    const door = toScreen(7.5, 8.92);
+    const p0 = toScreen(6.0, 6.05), pR = toScreen(9.05, 6.05), pF = toScreen(9.05, 8.95), pL = toScreen(6.0, 8.95);
     c.save();
-    c.fillStyle = "rgba(40, 70, 30, 0.28)";
+    c.fillStyle = "rgba(28, 62, 22, 0.26)";
     c.beginPath();
-    c.ellipse(base.x + 4, base.y + 12, 92, 28, 0, 0, 7);
+    c.moveTo(p0.x, p0.y + 6);
+    c.lineTo(pR.x, pR.y + 6);
+    c.lineTo(pF.x, pF.y + 10);
+    c.lineTo(pL.x, pL.y + 10);
+    c.closePath();
     c.fill();
     if (imgHouse.complete && imgHouse.naturalWidth) {
-      const w = 252, h = w * (imgHouse.naturalHeight / imgHouse.naturalWidth);
-      c.drawImage(imgHouse, base.x - w / 2 + 6 + sway * 0.12, base.y - h + 22, w, h);
-    } else {
-      c.fillStyle = "#c48a3a";
-      c.fillRect(base.x - 50, base.y - 80, 100, 80);
+      const w = 278, h = w * (imgHouse.naturalHeight / imgHouse.naturalWidth);
+      c.drawImage(imgHouse, door.x - w * 0.50, door.y - h + 18, w, h);
     }
+    const beds = [
+      [6.15, 8.55], [8.85, 8.5], [6.35, 7.15], [8.7, 7.05], [5.95, 8.15], [9.15, 8.2],
+    ];
+    beds.forEach(([x, y], i) => {
+      const q = toScreen(x, y);
+      drawPinkBloom(c, q.x, q.y - 4, 3.2 + (i % 3) * 0.4, 11 + i * 3);
+    });
     c.restore();
-    if (Math.sin(t * 2.4) > 0.2) {
-      c.fillStyle = "rgba(255, 248, 220, 0.35)";
+    if (Math.sin(t * 2.2) > 0.35) {
+      c.fillStyle = "rgba(255, 248, 220, 0.32)";
       c.beginPath();
-      c.arc(door.x + 22, door.y - 52, 5 + Math.sin(t * 3) * 1.2, 0, 7);
+      c.arc(door.x + 18, door.y - 58, 4.5 + Math.sin(t * 3) * 1.1, 0, 7);
       c.fill();
     }
-    label(c, "بيت شايف", door.x, door.y - 92);
+    label(c, "بيت شايف", door.x, door.y - 108);
   }
   function drawSite(c, s) {
     const p = toScreen(s.x + s.w / 2, s.y + s.h / 2);
@@ -1483,134 +1511,47 @@
     const p = toScreen(player.x, player.y);
     const walk = player.state === "walk";
     const ph = player.anim * (walk ? 11 : 2);
-    const bob = walk ? Math.abs(Math.sin(ph)) * 3.6 : Math.sin(t * 2.1) * 1.1;
-    const leg = walk ? Math.sin(ph) : 0;
-    const lean = walk ? Math.sin(ph) * 0.06 : 0;
-    let arm = walk ? Math.sin(ph) * 0.9 : 0.12;
-    let bend = 0, tool = null, toolAng = 0;
+    const bob = walk ? Math.abs(Math.sin(ph)) * 4.4 : Math.sin(t * 2.05) * 1.15;
+    const lean = walk ? Math.sin(ph) * 0.045 : 0;
+    let tool = null, toolAng = 0, arm = walk ? Math.sin(ph) * 0.7 : 0.1;
     if (player.state === "hoe" || player.state === "chop") {
       const k = 1 - Math.max(0, player.busy) / 0.7;
-      toolAng = -1.15 + Math.sin(k * Math.PI) * 2.15; arm = toolAng; tool = player.state; bend = 7;
+      toolAng = -1.1 + Math.sin(k * Math.PI) * 2.05;
+      arm = toolAng; tool = player.state;
     }
-    if (player.state === "water") { tool = "can"; arm = 0.55; }
-    if (player.state === "harvest") { bend = 15 + Math.sin(player.anim * 10) * 4; arm = 0.85; }
-    const blink = (Math.sin(t * 2.7) > 0.97);
-    c.fillStyle = "rgba(20,30,10,.28)"; c.beginPath(); c.ellipse(p.x, p.y + 8, 16, 6, 0, 0, 7); c.fill();
-    c.save(); c.translate(p.x, p.y + 6 - bob); c.scale(player.flip, 1); c.rotate(lean);
-
-    c.fillStyle = "#4e342e";
-    c.beginPath(); c.ellipse(-7, 3 + leg * 5.5, 5.4, 3.3, 0.1, 0, 7); c.fill();
-    c.beginPath(); c.ellipse(7, 3 - leg * 5.5, 5.4, 3.3, -0.1, 0, 7); c.fill();
-    c.fillStyle = "#3e2723";
-    c.fillRect(-9.5, -14, 6.5, 16 + leg * 5.5);
-    c.fillRect(3, -14, 6.5, 16 - leg * 5.5);
-    c.fillStyle = "#6d4c41";
-    c.fillRect(-9.5, -2 + leg * 5.5, 6.5, 4);
-    c.fillRect(3, -2 - leg * 5.5, 6.5, 4);
-
-    c.fillStyle = "#f7f1e4";
+    if (player.state === "water") { tool = "can"; arm = 0.5; }
+    if (player.state === "harvest") { tool = "pick"; }
+    c.fillStyle = "rgba(22, 42, 16, 0.32)";
     c.beginPath();
-    c.moveTo(-14, -18 - bend);
-    c.lineTo(-12, -50);
-    c.lineTo(12, -50);
-    c.lineTo(14, -18 - bend);
-    c.quadraticCurveTo(0, -10, -14, -18 - bend);
-    c.closePath(); c.fill();
-    c.strokeStyle = "#d7cbb8"; c.lineWidth = 1.2; c.stroke();
-    c.strokeStyle = "#c9a227"; c.lineWidth = 1.4;
-    c.beginPath(); c.moveTo(-11, -20); c.lineTo(11, -20); c.stroke();
-
-    c.fillStyle = "#2e7d32";
-    c.beginPath(); c.moveTo(-10, -49); c.lineTo(-9, -22); c.lineTo(9, -22); c.lineTo(10, -49); c.lineTo(4, -36); c.lineTo(0, -28); c.lineTo(-4, -36); c.closePath(); c.fill();
-    c.fillStyle = "#c9a227";
-    c.beginPath(); c.arc(-4, -40, 1.5, 0, 7); c.fill();
-    c.beginPath(); c.arc(-4, -32, 1.5, 0, 7); c.fill();
-    c.fillStyle = "#1b5e20"; c.fillRect(-7, -24, 14, 4);
-    c.fillStyle = "#6d4c41"; c.fillRect(-8, -21, 16, 3);
-
-    c.strokeStyle = "#f7f1e4"; c.lineWidth = 7; c.lineCap = "round";
-    c.beginPath(); c.moveTo(-9, -46); c.lineTo(-15, -30 + arm * 11); c.stroke();
-    c.beginPath(); c.moveTo(9, -46); c.lineTo(16, -31 - arm * 12); c.stroke();
-    c.fillStyle = "#d4a574";
-    c.beginPath(); c.arc(-15, -28 + arm * 11, 4.4, 0, 7); c.fill();
-    c.beginPath(); c.arc(16.5, -29 - arm * 12, 4.4, 0, 7); c.fill();
-
+    c.ellipse(p.x, p.y + 7, 15, 6, 0, 0, 7);
+    c.fill();
+    const img = (imgPlayer.complete && imgPlayer.naturalWidth) ? imgPlayer : imgShayef;
+    c.save();
+    c.translate(p.x, p.y + 5 - bob);
+    const squash = walk ? 1 + Math.sin(ph) * 0.028 : 1;
+    c.scale(player.flip * squash, 1 / squash);
+    c.rotate(lean + (tool === "pick" ? 0.08 : 0) + ((player.state === "hoe" || player.state === "chop") ? 0.06 : 0));
+    if (img.complete && img.naturalWidth) {
+      const h = 92, w = h * (img.naturalWidth / img.naturalHeight);
+      c.drawImage(img, -w / 2, -h + 4, w, h);
+    }
     if (tool === "hoe" || tool === "chop") {
-      c.save(); c.translate(16.5, -29 - arm * 12); c.rotate(toolAng);
-      c.strokeStyle = "#6d4c41"; c.lineWidth = 3.2; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, 24); c.stroke();
+      c.save();
+      c.translate(18, -42);
+      c.rotate(toolAng);
+      c.strokeStyle = "#5d4037"; c.lineWidth = 3.2; c.lineCap = "round";
+      c.beginPath(); c.moveTo(0, 0); c.lineTo(0, 26); c.stroke();
       c.fillStyle = tool === "chop" ? "#90a4ae" : "#8d6e63";
-      c.beginPath(); c.moveTo(-9, 22); c.lineTo(11, 19); c.lineTo(9, 28); c.lineTo(-7, 26); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(-9, 24); c.lineTo(11, 21); c.lineTo(9, 30); c.lineTo(-7, 28); c.closePath(); c.fill();
       c.restore();
     }
     if (tool === "can") {
-      c.fillStyle = "#42a5f5"; c.fillRect(14, -28, 13, 11); c.fillRect(25, -24, 7, 4);
-      c.strokeStyle = "#1565c0"; c.strokeRect(14, -28, 13, 11);
+      c.fillStyle = "#42a5f5"; c.fillRect(14, -48, 12, 10); c.fillRect(24, -44, 7, 4);
+      c.strokeStyle = "#1565c0"; c.strokeRect(14, -48, 12, 10);
       bits.push({ x: player.x + 0.22 * player.flip, y: player.y, vx: 0.45 * player.flip, vy: 0.55, life: 0.4, color: "#4fc3f7" });
     }
-
-    c.fillStyle = "#c48a5a";
-    c.beginPath(); c.ellipse(0, -52, 6, 4, 0, 0, 7); c.fill();
-
-    c.fillStyle = "#d4a574";
-    c.beginPath(); c.ellipse(0, -62, 14.5, 15.2, 0, 0, 7); c.fill();
-    c.fillStyle = "#c48a5a";
-    c.beginPath(); c.ellipse(-13.5, -61, 3.4, 4.2, 0.2, 0, 7); c.fill();
-    c.beginPath(); c.ellipse(13.5, -61, 3.4, 4.2, -0.2, 0, 7); c.fill();
-
-    c.fillStyle = "#4e342e";
-    c.beginPath(); c.ellipse(0, -70, 13, 6, 0, 0, Math.PI, true); c.fill();
-    c.beginPath(); c.ellipse(-11, -64, 4, 5, 0.4, 0, 7); c.fill();
-    c.beginPath(); c.ellipse(11, -64, 4, 5, -0.4, 0, 7); c.fill();
-
-    if (blink) {
-      c.strokeStyle = "#3e2723"; c.lineWidth = 1.6; c.lineCap = "round";
-      c.beginPath(); c.moveTo(-7.5, -64); c.lineTo(-2.5, -64); c.stroke();
-      c.beginPath(); c.moveTo(2.5, -64); c.lineTo(7.5, -64); c.stroke();
-    } else {
-      c.fillStyle = "#fff";
-      c.beginPath(); c.ellipse(-5, -64, 4.1, 4.6, 0, 0, 7); c.fill();
-      c.beginPath(); c.ellipse(5, -64, 4.1, 4.6, 0, 0, 7); c.fill();
-      c.fillStyle = "#5d4037";
-      c.beginPath(); c.arc(-4.6, -63.6, 2.3, 0, 7); c.fill();
-      c.beginPath(); c.arc(5.4, -63.6, 2.3, 0, 7); c.fill();
-      c.fillStyle = "#1a120c";
-      c.beginPath(); c.arc(-4.4, -63.4, 1.15, 0, 7); c.fill();
-      c.beginPath(); c.arc(5.6, -63.4, 1.15, 0, 7); c.fill();
-      c.fillStyle = "#fff";
-      c.beginPath(); c.arc(-3.5, -64.6, 0.85, 0, 7); c.fill();
-      c.beginPath(); c.arc(6.5, -64.6, 0.85, 0, 7); c.fill();
-    }
-    c.fillStyle = "#3e2723";
-    c.beginPath(); c.ellipse(-5.2, -69.2, 3.2, 1.1, 0.15, 0, 7); c.fill();
-    c.beginPath(); c.ellipse(5.2, -69.2, 3.2, 1.1, -0.15, 0, 7); c.fill();
-
-    c.fillStyle = "#c48a5a";
-    c.beginPath(); c.ellipse(0, -59.2, 2.4, 1.8, 0, 0, 7); c.fill();
-    c.strokeStyle = "#a06a48"; c.lineWidth = 1; c.beginPath(); c.moveTo(0, -59); c.lineTo(0, -56.5); c.stroke();
-
-    c.fillStyle = "#e57373"; c.globalAlpha = 0.42;
-    c.beginPath(); c.ellipse(-9.5, -59, 3.4, 2, 0, 0, 7); c.fill();
-    c.beginPath(); c.ellipse(9.5, -59, 3.4, 2, 0, 0, 7); c.fill();
-    c.globalAlpha = 1;
-    c.strokeStyle = "#a06a48"; c.lineWidth = 1.7; c.lineCap = "round";
-    c.beginPath(); c.arc(0, -56.5, 5.2, 0.2, Math.PI - 0.2); c.stroke();
-
-    c.fillStyle = "#e8c56b";
-    c.beginPath(); c.ellipse(0, -73, 19, 5.2, 0, 0, 7); c.fill();
-    c.strokeStyle = "#b89a4a"; c.lineWidth = 1.3; c.stroke();
-    c.fillStyle = "#d7b56d";
-    c.beginPath(); c.ellipse(0, -80, 11.5, 7.5, 0, 0, 7); c.fill();
-    c.stroke();
-    c.fillStyle = "#c62828";
-    c.fillRect(-11, -75, 22, 3);
-    c.fillStyle = "#fdd835";
-    c.beginPath(); c.moveTo(14, -80); c.lineTo(22, -86); c.lineTo(18, -78); c.closePath(); c.fill();
-    c.fillStyle = "#c9a227";
-    c.beginPath(); c.arc(0, -73, 2, 0, 7); c.fill();
-
     c.restore();
   }
-
 
   function drawNpc(c, n, t) {
     const p = toScreen(n.x, n.y);

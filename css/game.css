@@ -523,11 +523,11 @@ html[data-joy="right"] .act {
 .menu-veil {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(18, 28, 10, .18) 0%, rgba(18, 28, 10, .05) 38%, rgba(12, 20, 8, .55) 100%),
-    linear-gradient(180deg, rgba(255, 210, 120, .12) 0%, transparent 36%, rgba(20, 30, 10, .35) 100%);
+    linear-gradient(90deg, rgba(18, 32, 12, .22) 0%, rgba(18, 28, 10, .04) 42%, rgba(12, 20, 8, .18) 100%),
+    linear-gradient(180deg, rgba(255, 230, 150, .10) 0%, transparent 40%, rgba(20, 40, 12, .22) 100%);
 }
 .menu-sun {
-  position: absolute; top: 8%; left: 9%; z-index: 1; pointer-events: none;
+  position: absolute; top: 8%; left: 9%; z-index: 1; pointer-events: none; opacity: .35;
   width: 90px; height: 90px; border-radius: 50%;
   background: radial-gradient(circle at 40% 40%, #fff6c8, #ffd54a 46%, rgba(245, 166, 35, .15) 70%, transparent 72%);
   box-shadow: 0 0 40px 12px rgba(255, 200, 80, .28);
@@ -544,12 +544,12 @@ html[data-joy="right"] .act {
 }
 .menu-hero {
   position: absolute;
-  right: 4%;
-  bottom: -6%;
-  height: min(92%, 420px);
+  right: 3%;
+  bottom: -4%;
+  height: min(98%, 560px);
   width: auto;
   z-index: 3;
-  filter: drop-shadow(0 16px 0 rgba(30, 50, 10, .18));
+  filter: drop-shadow(0 14px 10px rgba(20, 40, 10, .35));
   animation: bob 2.8s ease-in-out infinite;
   pointer-events: none;
 }
