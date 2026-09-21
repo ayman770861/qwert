@@ -1,4 +1,4 @@
-const CACHE = "shayef-v6";
+const CACHE = "shayef-v7";
 const ASSETS = [
   "./",
   "./index.html",
