@@ -129,7 +129,12 @@
   let walkTo = null, fauna = [], bits = [], clouds = [], focus = null, lastT = 0;
   const imgShayef = new Image(); imgShayef.src = "img/shayef.png";
   const imgPlayer = new Image(); imgPlayer.src = "img/player.png";
+  const imgWalk = [1, 2, 3].map((n) => { const im = new Image(); im.src = "img/walk" + n + ".png"; return im; });
   const imgHouse = new Image(); imgHouse.src = "img/house.png";
+  const truckAI = { mode: "park", path: [], i: 0 };
+  let truckFlip = 1;
+  const ROAD_OUT = [{ x: 9.4, y: 12.3 }, { x: 8.5, y: 12.2 }, { x: 8.4, y: 13.2 }, { x: 8.2, y: 14.2 }, { x: 5.5, y: 14.2 }];
+  const ROAD_BACK = ROAD_OUT.slice().reverse();
 
   function starterPlots() {
     return [
@@ -757,11 +762,8 @@
       if (d < 1.15 && d < bestD) { bestD = d; best = { type: "npc", id: n.id, x: n.x, y: n.y }; }
     });
     if (mode === "world") {
-      const tx = player.riding ? player.x : truckPos.x, ty = player.riding ? player.y : truckPos.y;
-      const dt = Math.hypot(player.x - tx, player.y - ty);
-      if (!player.riding && dt < 1.4 && dt < bestD + 0.35) best = { type: "truck" };
-      const dd = Math.hypot(player.x - DROP.x, player.y - DROP.y);
-      if (dd < 1.25 && (player.riding || state.order)) best = { type: "drop" };
+      const dt = Math.hypot(player.x - truckPos.x, player.y - truckPos.y);
+      if (truckAI.mode === "park" && dt < 1.45) best = { type: "truck" };
     }
     return best;
   }
@@ -774,43 +776,59 @@
     });
     return { n, v };
   }
-  function mountTruck(on) {
-    if (on) {
-      player.x = truckPos.x; player.y = truckPos.y; player.riding = true;
-      say(state.order ? "السيارة محملة. روح لنقطة التوصيل غرب الساحة." : "اركبنا. حمّل محصولاً من الصندوق ثم سلّم.");
-    } else {
-      player.riding = false; truckPos.x = player.x; truckPos.y = player.y;
-      say("نزلنا من السيارة.");
+  function sendOrder() {
+    if (truckAI.mode !== "park") return toast("السيارة في الطريق");
+    if (!state.order) {
+      const { n, v } = cargoValue();
+      if (!n) return toast("ما عندك محصول. احصد ثم أرسل.");
+      state.order = { n, v, items: { ...state.items } };
+      state.items = {};
     }
+    truckAI.mode = "go"; truckAI.path = ROAD_OUT; truckAI.i = 0;
+    sfx("coin"); rumble(10);
+    say("السيارة طلعت توصّل الطلب وحدها، وترجع لموقفها.");
+    renderPanel(); save();
   }
-  function loadTruck() {
-    const { n, v } = cargoValue();
-    if (!n) { toast("ما عندك محصول. احصد أولاً."); return; }
-    state.order = { n, v, items: { ...state.items } };
-    state.items = {};
-    player.riding = true;
-    player.x = truckPos.x; player.y = truckPos.y;
-    sfx("coin"); rumble(12);
-    say("حمّلنا " + n + " صندوق. وصلّه عند اللافتة.");
-    save();
-  }
-  function deliverOrder() {
-    if (!state.order) { toast("السيارة فاضية"); return; }
+  function completeDelivery() {
+    if (!state.order) return;
     const pay = state.order.v + Math.round(state.order.v * 0.35) + 8;
     addCoins(pay); addXp(8);
     state.stats.sold += state.order.n;
     state.stats.delivered = (state.stats.delivered || 0) + 1;
-    flyEmoji("🚚"); sfx("level"); rumble(18);
-    toast("توصيل +" + pay + "🪙");
-    state.order = null; player.riding = false;
-    truckPos.x = DROP.x + 0.8; truckPos.y = DROP.y;
+    flyEmoji("🚚"); sfx("level"); rumble(16);
+    toast("تم التوصيل +" + pay + "🪙");
+    state.order = null;
     save(); checkProgress();
   }
-  function actionOf(f) {
-    if (player.riding) {
-      if (f && f.type === "drop" && state.order) return { ico: "📦", lab: "سلّم", ready: true, run: deliverOrder };
-      return { ico: "🚪", lab: "انزل", ready: true, run: () => mountTruck(false) };
+  function updateTruck(dt) {
+    if (truckAI.mode === "park") {
+      truckPos.x += (TRUCK.x - truckPos.x) * Math.min(1, dt * 4);
+      truckPos.y += (TRUCK.y - truckPos.y) * Math.min(1, dt * 4);
+      return;
     }
+    const path = truckAI.path;
+    if (!path.length) { truckAI.mode = "park"; return; }
+    if (truckAI.i >= path.length) {
+      if (truckAI.mode === "go") {
+        completeDelivery();
+        truckAI.mode = "back"; truckAI.path = ROAD_BACK; truckAI.i = 0;
+      } else {
+        truckAI.mode = "park";
+        truckPos.x = TRUCK.x; truckPos.y = TRUCK.y;
+        say("السيارة رجعت للموقف.");
+      }
+      return;
+    }
+    const tgt = path[truckAI.i];
+    const dx = tgt.x - truckPos.x, dy = tgt.y - truckPos.y, d = Math.hypot(dx, dy);
+    if (d < 0.12) { truckAI.i++; return; }
+    const spd = 4.2;
+    truckPos.x += (dx / d) * spd * dt;
+    truckPos.y += (dy / d) * spd * dt;
+    if (dx < -0.02) truckFlip = 1; else if (dx > 0.02) truckFlip = -1;
+    if (Math.random() < 0.5) bits.push({ x: truckPos.x, y: truckPos.y, vx: 0, vy: 0, life: 0.35, color: "rgba(80,80,80,.3)", dust: 1 });
+  }
+  function actionOf(f) {
     if (!f) return { ico: "🚶", lab: "امشِ", ready: false, run: null };
     if (f.type === "plot") {
       const p = state.plots[f.i];
@@ -849,13 +867,10 @@
     if (f.type === "table") return { ico: "🍵", lab: "شاي", ready: true, run: () => say("شايف يشرب شاي بالنعناع.") };
     if (f.type === "sofa") return { ico: "🛋️", lab: "اقعد", ready: true, run: () => say("جلسة مريحة بعد الحراثة.") };
     if (f.type === "truck") {
+      if (truckAI.mode !== "park") return { ico: "🚚", lab: "في الطريق", ready: false, run: null };
       const { n } = cargoValue();
-      if (n && !state.order) return { ico: "📦", lab: "حمّل", ready: true, run: loadTruck };
-      return { ico: "🚚", lab: "اركب", ready: true, run: () => mountTruck(true) };
-    }
-    if (f.type === "drop") {
-      if (state.order) return { ico: "📦", lab: "سلّم", ready: true, run: deliverOrder };
-      return { ico: "🪧", lab: "توصيل", ready: false, run: () => toast("حمّل الطلب في السيارة أولاً") };
+      if (n || state.order) return { ico: "🚚", lab: "أرسل الطلب", ready: true, run: sendOrder };
+      return { ico: "🚚", lab: "السيارة", ready: false, run: () => toast("اجمع محصولاً ثم أرسل الطلب") };
     }
     if (f.type === "animal") {
       const a = ANIMALS[f.id], st = state.animals[f.id];
@@ -892,10 +907,9 @@
   }
   function doAction() { const a = actionOf(focus); if (player.busy > 0) return; if (a.run) { sfx("click"); a.run(); } else sfx("error"); }
   function toggleHouse() {
-    if (player.riding) mountTruck(false);
     if (mode === "world") {
       worldPos.x = player.x; worldPos.y = player.y;
-      mode = "house"; player.x = 4.8; player.y = 5.4; player.state = "idle"; player.riding = false;
+      mode = "house"; player.x = 4.8; player.y = 5.4; player.state = "idle";
       say("بيت شايف. الصندوق للبيع، الخزانة للبذور، الطاولة للشاي.");
     } else {
       mode = "world"; player.x = worldPos.x; player.y = worldPos.y + 0.4;
@@ -947,13 +961,13 @@
       player.moving = Math.hypot(mx, my) > 0.05;
       player.state = player.moving ? "walk" : "idle";
       if (player.moving) {
-        const spd = player.riding ? 5.4 : 3.15, nx = player.x + mx * spd * dt, ny = player.y + my * spd * dt;
+        const spd = 3.2, nx = player.x + mx * spd * dt, ny = player.y + my * spd * dt;
         if (canPlace(nx, player.y)) player.x = nx;
         if (canPlace(player.x, ny)) player.y = ny;
-        if (player.riding) { truckPos.x = player.x; truckPos.y = player.y; }
-        if (Math.random() < (player.riding ? 0.45 : 0.3)) bits.push({ x: player.x, y: player.y, vx: 0, vy: 0, life: 0.3, color: player.riding ? "rgba(80,80,80,.35)" : "rgba(90,60,30,.3)", dust: 1 });
+        if (Math.random() < 0.28) bits.push({ x: player.x, y: player.y, vx: 0, vy: 0, life: 0.28, color: "rgba(70,110,40,.22)", dust: 1 });
       }
     }
+    updateTruck(dt);
     if (state.tutorial === 2 && mode === "world") {
       const d = Math.hypot(player.x - (PLOTX + 0.5), player.y - (PLOTY + 0.5));
       if (d < 1.9) setTutorial(3);
@@ -1010,12 +1024,20 @@
     }
   }
   function grassPalette(x, y) {
-    const h = hash(x + "p" + y) % 5;
-    if (h === 0) return ["#7ed957", "#4caf50", "#2e7d32"];
-    if (h === 1) return ["#8be06a", "#66bb6a", "#388e3c"];
-    if (h === 2) return ["#6bcf4a", "#43a047", "#2e7d32"];
-    if (h === 3) return ["#9ad95c", "#7cb342", "#558b2f"];
-    return ["#62d26a", "#43a047", "#1b5e20"];
+    const n = (hash(x + "p" + y) % 9) - 4;
+    const top = shade("#68cc58", n);
+    return [top, top, top];
+  }
+  function drawIsoTop(c, sx, sy, fill, sc = 1.18) {
+    const hw = (TW / 2) * sc, hh = (TH / 2) * sc;
+    c.beginPath();
+    c.moveTo(sx, sy - hh);
+    c.lineTo(sx + hw, sy);
+    c.lineTo(sx, sy + hh);
+    c.lineTo(sx - hw, sy);
+    c.closePath();
+    c.fillStyle = fill;
+    c.fill();
   }
   function drawPinkBloom(c, x, y, s, seed) {
     const cols = ["#f8bbd0", "#f48fb1", "#f06292", "#ec407a", "#ffcdd2"];
@@ -1128,23 +1150,22 @@
       }
       if (cell.t === "forest" || cell.t === "rock" || cell.t === "bush" || cell.t === "wild") {
         const pal = grassPalette(x + 3, y + 1);
-        drawBlock(c, p.x, p.y, shade(pal[0], -18), shade(pal[1], -12), shade(pal[2], -8));
+        drawIsoTop(c, p.x, p.y, shade("#5db84c", -6));
         drawTufts(c, p, x, y, t);
       } else if (cell.t === "path") {
-        drawBlock(c, p.x, p.y, "#d7c48a", "#b89a5c", "#8d6e3a");
+        drawIsoTop(c, p.x, p.y, shade("#cbb07a", (hash(x + "r" + y) % 7) - 3), 1.2);
         const ph = hash(x + "s" + y);
-        if (ph % 3 === 0) { c.fillStyle = "#c4a574"; c.beginPath(); c.ellipse(p.x + (ph % 7) - 3, p.y + 2, 3.2, 1.6, 0.2, 0, 7); c.fill(); }
+        if (ph % 3 === 0) { c.fillStyle = "rgba(160,130,80,.35)"; c.beginPath(); c.ellipse(p.x + (ph % 7) - 3, p.y + 2, 4.2, 1.8, 0.2, 0, 7); c.fill(); }
       } else if (cell.t === "plot") {
         const pl = state.plots[cell.plot];
         drawBlock(c, p.x, p.y, isReady(pl) ? "#a97843" : "#5d4037", "#4e342e", "#3e2723");
       } else if (cell.t === "site") drawBlock(c, p.x, p.y, "#ffe082", "#ffca28", "#f9a825");
       else if (cell.t === "house") {
-        const pal = grassPalette(x + 1, y);
-        drawBlock(c, p.x, p.y, shade(pal[0], -14), shade(pal[1], -10), shade(pal[2], -8));
+        drawIsoTop(c, p.x, p.y, shade("#5db84c", -8));
         drawTufts(c, p, x, y, t);
       } else {
         const pal = grassPalette(x, y);
-        drawBlock(c, p.x, p.y, pal[0], pal[1], pal[2]);
+        drawIsoTop(c, p.x, p.y, pal[0]);
         drawTufts(c, p, x, y, t);
         if (cell.clover) {
           c.fillStyle = "#2e7d32";
@@ -1161,8 +1182,8 @@
           drawPinkBloom(c, p.x + 6, p.y - 2, 2.2, x * 3 + y);
         }
       }
-      if (focus && ((focus.type === "plot" && cell.plot === focus.i) || (focus.type === "place" && focus.x === x && focus.y === y) || ((focus.type === "forest" || focus.type === "rock" || focus.type === "bush" || focus.type === "wild") && focus.x === x && focus.y === y))) {
-        c.strokeStyle = "#ffe566"; c.lineWidth = 2.5;
+      if (focus && (focus.type === "plot" && cell.plot === focus.i || ((focus.type === "forest" || focus.type === "rock" || focus.type === "bush" || focus.type === "wild") && focus.x === x && focus.y === y))) {
+        c.strokeStyle = "rgba(255, 236, 150, 0.7)"; c.lineWidth = 2;
         c.beginPath(); c.moveTo(p.x, p.y - TH / 2); c.lineTo(p.x + TW / 2, p.y); c.lineTo(p.x, p.y + TH / 2); c.lineTo(p.x - TW / 2, p.y); c.closePath(); c.stroke();
       }
     }
@@ -1185,11 +1206,10 @@
       c.fillStyle = "#8d6e63"; c.fillRect(p.x - 14, p.y - 28, 28, 5);
     }});
     sprites.push({ z: DROP.x + DROP.y, draw: () => drawDrop(c) });
-    const tzx = player.riding ? player.x : truckPos.x, tzy = player.riding ? player.y : truckPos.y;
-    sprites.push({ z: tzx + tzy + 0.35, draw: () => drawTruck(c, tzx, tzy, t) });
+    sprites.push({ z: truckPos.x + truckPos.y + 0.35, draw: () => drawTruck(c, truckPos.x, truckPos.y, t) });
     fauna.forEach((f) => sprites.push({ z: f.x + f.y + (f.z || 0) / 90, draw: () => drawFauna(c, f, t) }));
     NPCS.forEach((n) => { if (isOpen(n.x, n.y)) sprites.push({ z: n.x + n.y + 0.3, draw: () => drawNpc(c, n, t) }); });
-    if (!player.riding) sprites.push({ z: player.x + player.y + 0.4, draw: () => drawShayef(c, t) });
+    sprites.push({ z: player.x + player.y + 0.4, draw: () => drawShayef(c, t) });
     bits.forEach((b) => sprites.push({ z: b.x + b.y + 1, draw: () => {
       const p = toScreen(b.x, b.y); c.globalAlpha = Math.max(0, b.life);
       c.fillStyle = b.color; c.beginPath(); c.arc(p.x, p.y - (b.dust ? 0 : 16), b.dust ? 2.5 : 3.2, 0, 7); c.fill(); c.globalAlpha = 1;
@@ -1305,7 +1325,6 @@
       c.arc(door.x + 18, door.y - 58, 4.5 + Math.sin(t * 3) * 1.1, 0, 7);
       c.fill();
     }
-    label(c, "بيت شايف", door.x, door.y - 108);
   }
   function drawSite(c, s) {
     const p = toScreen(s.x + s.w / 2, s.y + s.h / 2);
@@ -1464,9 +1483,9 @@
   }
   function drawTruck(c, x, y, t) {
     const p = toScreen(x, y);
-    const bob = player.riding && player.moving ? Math.sin(t * 18) * 1.2 : 0;
-    c.fillStyle = "rgba(0,0,0,.25)"; c.beginPath(); c.ellipse(p.x, p.y + 8, 26, 9, 0, 0, 7); c.fill();
-    c.save(); c.translate(p.x, p.y + 2 - bob); c.scale(player.flip, 1);
+    const bob = truckAI.mode !== "park" ? Math.sin(t * 16) * 1.1 : 0;
+    c.fillStyle = "rgba(0,0,0,.22)"; c.beginPath(); c.ellipse(p.x, p.y + 8, 26, 9, 0, 0, 7); c.fill();
+    c.save(); c.translate(p.x, p.y + 2 - bob); c.scale(truckFlip, 1);
     c.fillStyle = "#1565c0";
     c.beginPath(); c.moveTo(-30, -6); c.lineTo(-30, -22); c.lineTo(-8, -22); c.lineTo(-4, -34); c.lineTo(18, -34); c.lineTo(22, -22); c.lineTo(28, -22); c.lineTo(28, -6); c.closePath(); c.fill();
     c.fillStyle = "#0d47a1"; c.fillRect(-28, -20, 18, 14);
@@ -1484,13 +1503,11 @@
     c.beginPath(); c.arc(-16, -2, 6, 0, 7); c.fill();
     c.beginPath(); c.arc(16, -2, 6, 0, 7); c.fill();
     c.fillStyle = "#9e9e9e"; c.beginPath(); c.arc(-16, -2, 2.5, 0, 7); c.fill(); c.beginPath(); c.arc(16, -2, 2.5, 0, 7); c.fill();
-    if (player.riding) {
-      c.fillStyle = "#e0b089"; c.beginPath(); c.arc(8, -38, 6, 0, 7); c.fill();
-      c.fillStyle = "#d7b56d"; c.beginPath(); c.ellipse(8, -44, 8, 3, 0, 0, 7); c.fill();
-    }
     c.restore();
-    c.font = "10px Tahoma"; c.fillStyle = "#fff8e4"; c.textAlign = "center";
-    c.fillText(state.order ? "طلب جاهز" : "سيارة شايف", p.x, p.y - 48);
+    if (truckAI.mode !== "park") {
+      c.font = "10px Tahoma"; c.fillStyle = "#fff8e4"; c.textAlign = "center";
+      c.fillText(truckAI.mode === "go" ? "توصيل…" : "عودة…", p.x, p.y - 48);
+    }
   }
   function drawCrop(c, x, y, plot, t) {
     const crop = CROPS[plot.crop.id], st = growStage(plot.crop, Date.now()), p = toScreen(x, y);
@@ -1510,30 +1527,29 @@
   function drawShayef(c, t) {
     const p = toScreen(player.x, player.y);
     const walk = player.state === "walk";
-    const ph = player.anim * (walk ? 11 : 2);
-    const bob = walk ? Math.abs(Math.sin(ph)) * 4.4 : Math.sin(t * 2.05) * 1.15;
-    const lean = walk ? Math.sin(ph) * 0.045 : 0;
-    let tool = null, toolAng = 0, arm = walk ? Math.sin(ph) * 0.7 : 0.1;
+    const ph = player.anim * (walk ? 10 : 2);
+    const bob = walk ? Math.abs(Math.sin(ph)) * 1.6 : Math.sin(t * 2.05) * 0.8;
+    let tool = null, toolAng = 0;
     if (player.state === "hoe" || player.state === "chop") {
       const k = 1 - Math.max(0, player.busy) / 0.7;
       toolAng = -1.1 + Math.sin(k * Math.PI) * 2.05;
-      arm = toolAng; tool = player.state;
+      tool = player.state;
     }
-    if (player.state === "water") { tool = "can"; arm = 0.5; }
-    if (player.state === "harvest") { tool = "pick"; }
-    c.fillStyle = "rgba(22, 42, 16, 0.32)";
-    c.beginPath();
-    c.ellipse(p.x, p.y + 7, 15, 6, 0, 0, 7);
-    c.fill();
-    const img = (imgPlayer.complete && imgPlayer.naturalWidth) ? imgPlayer : imgShayef;
+    if (player.state === "water") tool = "can";
+    if (player.state === "harvest") tool = "pick";
+    let img = imgPlayer;
+    if (walk) {
+      const seq = [imgWalk[0], imgWalk[1], imgWalk[2], imgWalk[1]];
+      const fr = seq[Math.floor(player.anim * 7) % 4];
+      if (fr && fr.complete && fr.naturalWidth) img = fr;
+    }
     c.save();
-    c.translate(p.x, p.y + 5 - bob);
-    const squash = walk ? 1 + Math.sin(ph) * 0.028 : 1;
-    c.scale(player.flip * squash, 1 / squash);
-    c.rotate(lean + (tool === "pick" ? 0.08 : 0) + ((player.state === "hoe" || player.state === "chop") ? 0.06 : 0));
-    if (img.complete && img.naturalWidth) {
-      const h = 92, w = h * (img.naturalWidth / img.naturalHeight);
-      c.drawImage(img, -w / 2, -h + 4, w, h);
+    c.translate(p.x, p.y + 2 - bob);
+    c.scale(player.flip, 1);
+    c.rotate((tool === "pick" ? 0.07 : 0) + ((tool === "hoe" || tool === "chop") ? 0.05 : 0));
+    if (img && img.complete && img.naturalWidth) {
+      const h = 90, w = h * (img.naturalWidth / img.naturalHeight);
+      c.drawImage(img, -w / 2, -h + 6, w, h);
     }
     if (tool === "hoe" || tool === "chop") {
       c.save();
@@ -1768,7 +1784,7 @@
   function renderBarn() {
     const ids = Object.keys(state.items).filter((id) => state.items[id] > 0);
     if (!ids.length) { $("#panel-body").innerHTML = `<div class="empty-state"><div class="ee">📦</div><p>الصندوق فارغ. احصد ثم عُد.</p></div>`; return; }
-    let html = `<button class="btn" data-sell-all="1" style="width:100%;margin-bottom:8px">بيع الكل</button>`;
+    let html = `<button class="btn" data-send-order="1" style="width:100%;margin-bottom:8px">🚚 أرسل الطلب بالسيارة</button><button class="btn btn-ghost" data-sell-all="1" style="width:100%;margin-bottom:8px">بيع الكل في الصندوق</button>`;
     html += ids.map((id) => { const c = catalog(id); if (!c) return ""; const q = state.items[id]; return `<div class="card"><div class="ce">${c.emoji}</div><div><h3>${c.name} ×${q}</h3><p>${sellPriceOf(id)}🪙 للحبة</p></div><div><button class="btn tiny" data-sell="${id}">بيع 1</button></div></div>`; }).join("");
     $("#panel-body").innerHTML = html;
   }
@@ -1924,6 +1940,7 @@
       if (d("[data-claim-story]")) claimStory();
       const cd = d("[data-claim-daily]"); if (cd) claimDaily(cd.dataset.claimDaily);
       if (d("[data-sell-all]")) sellAll();
+      if (d("[data-send-order]")) { sendOrder(); }
       const sl = d("[data-sell]"); if (sl) sellItem(sl.dataset.sell, 1);
       const pl = d("[data-plant]"); if (pl) { plant(+pl.dataset.plot, pl.dataset.plant); closeSheet(); }
       const ft = d("[data-fert]"); if (ft) fertilize(+ft.dataset.fert);
